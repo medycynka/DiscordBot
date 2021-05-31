@@ -1,6 +1,12 @@
 # DiscordBot
 Prosty bot do discorda do puszczania muzyki z youtube (nie mam spotify).\
-Komendy:
+W celu uruchomienia należy:
+1. Utworzyć folder "data"
+2. W folderze "data" utworzyć plik "Token.txt"
+3. Wkleić do pliku "Token.txt" token swojego bota ([link](https://discord.com/developers/docs/intro))
+4. Uruchomić plik bot.py
+
+W celu zarządzaniem botem należy na czacie wpisać !+komenda:
 ```
 Music:
   connect     
