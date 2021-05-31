@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-
 import asyncio
 import itertools
 import sys
@@ -21,7 +20,7 @@ ytdlopts = {
     'quiet': True,
     'no_warnings': True,
     'default_search': 'auto',
-    'source_address': '0.0.0.0'  # ipv6 addresses cause issues sometimes
+    'source_address': '0.0.0.0'
 }
 
 ffmpegopts = {
@@ -45,12 +44,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, requester):
         super().__init__(source)
         self.requester = requester
-
         self.title = data.get('title')
         self.web_url = data.get('webpage_url')
-
-        # YTDL info dicts (data) have other useful information you might want
-        # https://github.com/rg3/youtube-dl/blob/master/README.md
 
     def __getitem__(self, item: str):
         """Allows us to access attributes similar to a dict.
@@ -66,7 +61,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
         data = await loop.run_in_executor(None, to_run)
 
         if 'entries' in data:
-            # take first item from a playlist
             data = data['entries'][0]
 
         await ctx.send(f'```ini\n[Added {data["title"]} to the Queue.]\n```')
@@ -97,7 +91,6 @@ class MusicPlayer(commands.Cog):
     simultaneously.
     When the bot disconnects from the Voice it's instance will be destroyed.
     """
-
     __slots__ = ('bot', '_guild', '_channel', '_cog', 'queue', 'next', 'current', 'np', 'volume')
 
     def __init__(self, ctx):
@@ -123,15 +116,12 @@ class MusicPlayer(commands.Cog):
             self.next.clear()
 
             try:
-                # Wait for the next song. If we timeout cancel the player and disconnect...
                 async with timeout(300):  # 5 minutes...
                     source = await self.queue.get()
             except asyncio.TimeoutError:
                 return self.destroy(self._guild)
 
             if not isinstance(source, YTDLSource):
-                # Source was probably a stream (not downloaded)
-                # So we should regather to prevent stream expiration
                 try:
                     source = await YTDLSource.regather_stream(source, loop=self.bot.loop)
                 except Exception as e:
@@ -147,12 +137,10 @@ class MusicPlayer(commands.Cog):
                                                f'`{source.requester}`')
             await self.next.wait()
 
-            # Make sure the FFmpeg process is cleaned up.
             source.cleanup()
             self.current = None
 
             try:
-                # We are no longer playing this song...
                 await self.np.delete()
             except discord.HTTPException:
                 pass
@@ -246,9 +234,6 @@ class Music(commands.Cog):
             await ctx.invoke(self.connect_)
 
         player = self.get_player(ctx)
-
-        # If download is False, source will be a dict which will be used later to regather the stream.
-        # If download is True, source will be a discord.FFmpegPCMAudio with a VolumeTransformer.
         source = await YTDLSource.create_source(ctx, search, loop=self.bot.loop, download=False)
 
         await player.queue.put(source)
@@ -307,7 +292,6 @@ class Music(commands.Cog):
         if player.queue.empty():
             return await ctx.send('There are currently no more queued songs.')
 
-        # Grab up to 5 entries from the queue...
         upcoming = list(itertools.islice(player.queue._queue, 0, 5))
 
         fmt = '\n'.join(f'**`{_["title"]}`**' for _ in upcoming)
@@ -315,7 +299,7 @@ class Music(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name='now_playing', aliases=['np', 'current', 'currentsong', 'playing'])
+    @commands.command(name='now_playing', aliases=['np', 'current', 'current_song', 'playing'])
     async def now_playing_(self, ctx):
         """Display information about the currently playing song."""
         vc = ctx.voice_client
@@ -328,13 +312,11 @@ class Music(commands.Cog):
             return await ctx.send('I am not currently playing anything!')
 
         try:
-            # Remove our previous now_playing message.
             await player.np.delete()
         except discord.HTTPException:
             pass
 
-        player.np = await ctx.send(f'**Now Playing:** `{vc.source.title}` '
-                                   f'requested by `{vc.source.requester}`')
+        player.np = await ctx.send(f'**Now Playing:** `{vc.source.title}` requested by `{vc.source.requester}`')
 
     @commands.command(name='volume', aliases=['vol'])
     async def change_volume(self, ctx, *, vol: float):
